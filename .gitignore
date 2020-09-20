@@ -9,6 +9,7 @@
 /GIS/*
 /scrap/*
 /other/*
+/scripts/aser_2018_initial_investigation.html
 
 !/outputs/.gitkeep
 !/inputs/.gitkeep
