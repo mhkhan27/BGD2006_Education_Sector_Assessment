@@ -5,10 +5,11 @@ library(purrr)
 library(stringr)
 library(openxlsx)
 library(data.table)
-
+require(haven)
 # path_lication -----------------------------------------------------------
 
 path_file_full = list.files("inputs/raw_data/ASER_DATA_excel/",full.names = T)
+a<- read_sav("inputs/Final dataset-ASER plus - 19082019.sav")
 
 # path --------------------------------------------------------------------
 problematric_sheet <- list()
@@ -92,13 +93,13 @@ write.csv(combine_data_all,"outputs/merge_data_all_similar.csv")
 write.csv(problematric_sheet_col_name,"outputs/problem_in_col_name.csv")
 write.csv(problematric_sheet_col_length,"outputs/problem_in_col_length.csv")
 
-a <- combine_data_all  %>% filter(SL =="1") %>% select(SL,sheet_name)
-
-aa <- combine_data_all %>% group_by(combine_data_all$sheet_name,combine_data_all$file_location) %>% summarise(
-  n =n()
-)
-aaaa <- data.frame(
-shhet_name = aa$`combine_data_all$sheet_name`,
-tf = aa$`combine_data_all$sheet_name` %in% a$sheet_name ) %>% filter(tf ==F)
-
-combine_data_all2 <-  combine_data_all %>% filter(sheet_name =="BLC-410")
+# a <- combine_data_all  %>% filter(SL =="1") %>% select(SL,sheet_name)
+# 
+# aa <- combine_data_all %>% group_by(combine_data_all$sheet_name,combine_data_all$file_location) %>% summarise(
+#   n =n()
+# )
+# aaaa <- data.frame(
+# shhet_name = aa$`combine_data_all$sheet_name`,
+# tf = aa$`combine_data_all$sheet_name` %in% a$sheet_name ) %>% filter(tf ==F)
+# 
+# combine_data_all2 <-  combine_data_all %>% filter(sheet_name =="BLC-410")
