@@ -1,15 +1,19 @@
 rm(list = ls())
 library(dplyr)
-library(haven)
 library(snakecase)
 library(tidyr)
 library(stringr)
-library(qdapRegex)
+library(butteR)
+library(srvyr)
+library(plyr)
+library(kableExtra)
+library(ggplot2)
 source("scripts/population_data_cleaning.R")
 
 # read_csv ----------------------------------------------------------------
 df_2019 <- read.csv("inputs/compiled.list_2019.csv",na.strings = c(""," ","N/A"),stringsAsFactors = F)
-df_2018 <-haven::read_sav("inputs/Final dataset-ASER plus - 19082019.sav") %>% filter(!is.na(address)) %>% filter (address!="")
+df_2018 <-read.csv("inputs/Final dataset-ASER plus 19082019.csv",na.strings = c(""," ","N/A","#NULL!"),
+                             stringsAsFactors = F) %>% dplyr::filter(!is.na(address)) %>% dplyr::filter (address!="")
 name_fix <- read.csv("DAP/fix_name.csv",na.strings = c(""," "),stringsAsFactors = F)
 #  data_cleaning_2018 data -----------------------------------------------------------------
 
@@ -93,12 +97,13 @@ remove_from_final_dataset <- c("camp_loc",
 
 
 dataset_2018_cleaned <- df_2018 %>%  left_join(name_fix,by =c("camp_name_new"="old_name")) %>% 
-  select(-remove_from_final_dataset) %>% filter(fix_name !="need_to_remove") 
+  select(-remove_from_final_dataset) %>% dplyr::filter(fix_name !="need_to_remove") 
 
 dataset_2018_cleaned$Camp <- dataset_2018_cleaned$fix_name 
 
 dataset_2018_cleaned <- dataset_2018_cleaned %>% select(-c("fix_name","camp_name_new"))
 
+dataset_2018_cleaned<- dataset_2018_cleaned %>% dplyr::filter(!is.na(aggregated))
 
 
 # data_cleaning_2019 ------------------------------------------------------
@@ -108,19 +113,19 @@ df_2019$Camp <-snakecase::to_snake_case(df_2019$Camp)
 df_2019$Camp <- if_else(df_2019$Camp %in% remove_zero,
                         str_remove_all(df_2019$Camp, "0"),df_2019$Camp,NULL)
 
-dataset_2019_cleaned<- df_2019 %>%  filter(Level.of.the.student !="ECD",!is.na(Level.of.the.student))
+dataset_2019_cleaned<- df_2019 %>%  dplyr::filter(Level.of.the.student !="ECD",!is.na(Level.of.the.student))
 
 # matching -----------------------------------------------------------------
 dataset_2018_cleaned$childname <-snakecase::to_snake_case(dataset_2018_cleaned$childname)
 dataset_2019_cleaned$Name.of.the.student <-snakecase::to_snake_case(dataset_2019_cleaned$Name.of.the.student)
 
-match.df_2018_cleaned <- dataset_2018_cleaned %>% mutate(
+match.df_2018_cleaned <- dataset_2018_cleaned %>% dplyr::mutate(
   student_name_and_facility_id = paste0(childname,"_",centerid),
   level_of_the_student_2018 = aggregated,
   camp_2018 =Camp
-)  %>% select(student_name_and_facility_id,level_of_the_student_2018)
+)  %>% dplyr::select(student_name_and_facility_id,level_of_the_student_2018,childage,centerid)  %>% dplyr::distinct()
 
-match.df_2019_cleaned <- dataset_2019_cleaned %>% mutate(
+match.df_2019_cleaned <- dataset_2019_cleaned %>% dplyr::mutate(
   student_name_and_facility_id = paste0(Name.of.the.student,"_",Facility.ID),
   level_of_the_student_2019 = if_else(Level.of.the.student == "level1",1,
                                       if_else(Level.of.the.student == "level2",2,
@@ -128,19 +133,77 @@ match.df_2019_cleaned <- dataset_2019_cleaned %>% mutate(
                                                       if_else(Level.of.the.student == "level4",4,999999,NULL)))),
   
   camp_2019 =Camp
-) %>% select(student_name_and_facility_id,camp_2019,level_of_the_student_2019)
+) %>% dplyr::select(student_name_and_facility_id,camp_2019,level_of_the_student_2019,Implementing.partner,Facility.ID) %>% dplyr::distinct()
 
+
+match.df_2018_cleaned_unique_center_IDs <- match.df_2018_cleaned %>% dplyr::distinct(centerid)
+match.df_2019_cleaned_unique_center_IDs <- match.df_2019_cleaned %>% dplyr::distinct(Facility.ID)
+
+faicility_id_2018_in_2019 <- match.df_2018_cleaned_unique_center_IDs$centerid %in% match.df_2019_cleaned_unique_center_IDs$Facility.ID %>% AMR::freq() %>% 
+  as.data.frame() %>% dplyr::filter(item == T) %>% dplyr::select(count,percent)
+
+faicility_id_2018_in_2019_percent <- paste0(round(faicility_id_2018_in_2019[,2]*100,2),"%")
+faicility_id_2018_in_2019_count <- faicility_id_2018_in_2019[,1]
+
+
+faicility_id_2019_in_2018 <- match.df_2019_cleaned_unique_center_IDs$Facility.ID %in% match.df_2018_cleaned_unique_center_IDs$centerid  %>% AMR::freq() %>% 
+  as.data.frame() %>% dplyr::filter(item == T) %>% select(count,percent)
+
+faicility_id_2019_in_2018_percent <- paste0(round(faicility_id_2019_in_2018[,2]*100,2),"%")
+faicility_id_2019_in_2018_count <- faicility_id_2019_in_2018[,1]
+
+
+##without subset 
 match.df_2018_cleaned$student_name_and_facility_id %in% match.df_2019_cleaned$student_name_and_facility_id %>% AMR::freq()
-match.df_2019_cleaned$student_name_and_facility_id %in% match.df_2018_cleaned$student_name_and_facility_id %>% AMR::freq()
+match.df_2019_cleaned$student_name_and_facility_id %in% match.df_2018_cleaned$student_name_and_facility_id %>% AMR::freq() 
+ 
+##withsubset
+match.df_2018_cleaned_subset_only_centerID_matching <- match.df_2018_cleaned %>% dplyr::filter(match.df_2018_cleaned$centerid %in% match.df_2019_cleaned$Facility.ID) %>% distinct(student_name_and_facility_id) 
+match.df_2019_cleaned_subset_only_centerID_matching <- match.df_2019_cleaned %>% dplyr::filter(match.df_2019_cleaned$Facility.ID %in% match.df_2018_cleaned$centerid) %>% distinct(student_name_and_facility_id)
 
-matched_df_full <- match.df_2018_cleaned %>% inner_join(match.df_2019_cleaned) %>% mutate(
+match.df_2018_cleaned_overall <- match.df_2018_cleaned %>% dplyr::distinct(student_name_and_facility_id)
+match.df_2019_cleaned_overall <- match.df_2019_cleaned %>% dplyr::distinct(student_name_and_facility_id)
+
+
+data_2018_in_2019 <- match.df_2018_cleaned_subset_only_centerID_matching$student_name_and_facility_id %in% match.df_2019_cleaned_subset_only_centerID_matching$student_name_and_facility_id %>% AMR::freq() %>% 
+  as.data.frame() %>% dplyr::filter(item == T) %>% select(count,percent)
+data_2018_in_2019_percent <- paste0(round(data_2018_in_2019[,2]*100,2),"%")
+data_2018_in_2019_count <- data_2018_in_2019[,1]
+
+data_2018_in_2019_overall <- match.df_2018_cleaned_overall$student_name_and_facility_id %in% match.df_2019_cleaned_overall$student_name_and_facility_id %>% AMR::freq() %>% 
+  as.data.frame() %>% dplyr::filter(item == T) %>% select(count,percent)
+data_2018_in_2019_percent_overall <- paste0(round(data_2018_in_2019_overall[,2]*100,2),"%")
+data_2018_in_2019_count_overall <- data_2018_in_2019_overall[,1]
+
+
+data_2019_in_2018 <- match.df_2019_cleaned_subset_only_centerID_matching$student_name_and_facility_id %in% match.df_2018_cleaned_subset_only_centerID_matching$student_name_and_facility_id  %>% AMR::freq() %>% 
+  as.data.frame() %>% dplyr::filter(item == T) %>% select(count,percent)
+data_2019_in_2018_percent <- paste0(round(data_2019_in_2018[,2]*100,2),"%")
+data_2019_in_2018_count <- data_2019_in_2018[,1]
+
+data_2019_in_2018_overall <- match.df_2019_cleaned_overall$student_name_and_facility_id %in% match.df_2018_cleaned_overall$student_name_and_facility_id  %>% AMR::freq() %>% 
+  as.data.frame() %>% dplyr::filter(item == T) %>% select(count,percent)
+data_2019_in_2018_percent_overall <- paste0(round(data_2019_in_2018_overall[,2]*100,2),"%")
+data_2019_in_2018_count_overall <- data_2019_in_2018_overall[,1]
+
+ 
+# match.df_2018_cleaned_subset_only_centerID_matching$student_name_and_facility_id %in% match.df_2019_cleaned_subset_only_centerID_matching$student_name_and_facility_id %>% AMR::freq()
+# match.df_2019_cleaned_subset_only_centerID_matching$student_name_and_facility_id %in% match.df_2018_cleaned_subset_only_centerID_matching$student_name_and_facility_id %>% AMR::freq()
+
+matched_df_full <- match.df_2019_cleaned %>% dplyr::left_join(match.df_2018_cleaned) %>% dplyr::mutate(
   change_value = level_of_the_student_2019-level_of_the_student_2018,
   change_lable = if_else(change_value >0 ,"increased",
                          if_else(change_value <0 ,"decreased",
-                                 if_else(change_value == 0 ,"stayed_same","error",NULL)))
-)
+                                 if_else(change_value == 0 ,"stayed_same","error",NULL)))) %>% dplyr::filter(!is.na(level_of_the_student_2019)) %>% dplyr::filter(!is.na(level_of_the_student_2018)) %>% dplyr::distinct()
 
-matched_df_full$change_lable %>% AMR::freq()
+
+matched_df_full$childage <- as.numeric(matched_df_full$childage)
+
+matched_df_full <- matched_df_full %>% dplyr::mutate(
+  child_under_6 = if_else(childage <6,"yes","no",NULL)
+) %>% select(-childage)
+
+total_change <- matched_df_full$change_lable %>% AMR::freq()
 
 percentage_change_per_camp <- matched_df_full %>% dplyr::group_by(camp_2019) %>% dplyr::summarise(
   total = n(),
@@ -156,4 +219,114 @@ percentage_change_per_camp <- matched_df_full %>% dplyr::group_by(camp_2019) %>%
                                  if_else(change_val == 0 ,"stayed_same","error",NULL)))
 )
 
-aaa <- matched_df_full %>% filter(change_value!=0,camp_2019 == "camp_10")
+percentage_change_by_implementing_partner <- matched_df_full %>% dplyr::group_by(Implementing.partner) %>% dplyr::summarise(
+  total = n(),
+  increased = sum(change_value >0,na.rm=T),
+  decreased = sum(change_value <0,na.rm=T),
+  stayed_same = sum(change_value ==0,na.rm=T),
+  percent_increased = increased/total*100,
+  percent_decreased = decreased/total*100,
+  percent_stayed_same = stayed_same/total*100,
+  change_val = increased-decreased,
+  change_lable = if_else(change_val >0 ,"increased",
+                         if_else(change_val <0 ,"decreased",
+                                 if_else(change_val == 0 ,"stayed_same","error",NULL)))
+)
+# butteR ------------------------------------------------------------------
+
+
+matched_df_full_only_level<-matched_df_full %>% select(level_of_the_student_2019,level_of_the_student_2018,child_under_6)
+
+matched_df_full_only_level$level_of_the_student_2019 <- as.factor(matched_df_full_only_level$level_of_the_student_2019) %>% factor(labels = c("level_1","level_2","level_3","level_4"))
+matched_df_full_only_level$level_of_the_student_2018 <- as.factor(matched_df_full_only_level$level_of_the_student_2018) %>% factor(labels = c("level_1","level_2","level_3","level_4"))
+
+matched_df_full_only_level <- as_survey(matched_df_full_only_level)
+mean_working_table<- mean_prop_working(matched_df_full_only_level,list_of_variables = c("level_of_the_student_2019","child_under_6"),
+                  aggregation_level ="level_of_the_student_2018" )
+ 
+fre_2018 <- matched_df_full_only_level$variables$level_of_the_student_2018 %>% AMR::freq() %>% as.data.frame() %>% select(item,count)
+change_between_level <- mean_working_table %>% left_join(fre_2018,by =c("level_of_the_student_2018"="item")) %>% dplyr::mutate(
+  count_2019_level_1 = count*level_of_the_student_2019.level_1,
+  count_2019_level_2 = count*level_of_the_student_2019.level_2,
+  count_2019_level_3 = count*level_of_the_student_2019.level_3,
+  count_2019_level_4 = count*level_of_the_student_2019.level_4
+) %>% select(-dplyr::starts_with("count"),-dplyr::starts_with("child"))
+
+
+# level_one_to_level_two --------------------------------------------------
+
+only_level_one_to_two_df <- matched_df_full %>% dplyr::filter(
+  level_of_the_student_2018 == 1 & level_of_the_student_2019 ==2
+)
+ level_one_to_two <-only_level_one_to_two_df$child_under_6 %>% AMR::freq() %>% as.data.frame() %>% 
+   dplyr::rename("level_one_to_two_count"="count","level_one_to_two_percent"="percent") %>% 
+   select(-cum_count,-cum_percent)
+
+only_level_one_to_three_df <- matched_df_full %>% dplyr::filter(
+  level_of_the_student_2018 == 1 & level_of_the_student_2019 ==3
+)
+
+level_one_to_three<- only_level_one_to_three_df$child_under_6 %>% AMR::freq() %>% as.data.frame()%>% 
+  dplyr::rename("level_one_to_three_count"="count","level_one_to_three_percent"="percent") %>% 
+  select(-cum_count,-cum_percent)
+
+
+only_level_one_to_four_df <- matched_df_full %>% dplyr::filter(
+  level_of_the_student_2018 == 1 & level_of_the_student_2019 ==4
+)
+level_one_to_four<-only_level_one_to_four_df$child_under_6 %>% AMR::freq()%>% as.data.frame() %>% 
+  dplyr::rename("level_one_to_four_count"="count","level_one_to_four_percent"="percent") %>% 
+  select(-cum_count,-cum_percent)
+
+only_level_two_to_three_df <- matched_df_full %>% dplyr::filter(
+  level_of_the_student_2018 == 2 & level_of_the_student_2019 ==3
+)
+level_two_to_three<-only_level_two_to_three_df$child_under_6 %>% AMR::freq()%>% as.data.frame()%>% 
+  dplyr::rename("level_two_to_three_count"="count","level_two_to_three_percent"="percent") %>% 
+  select(-cum_count,-cum_percent)
+
+
+only_level_two_to_four_df <- matched_df_full %>% dplyr::filter(
+  level_of_the_student_2018 == 2 & level_of_the_student_2019 ==4
+)
+level_two_to_four<-only_level_two_to_four_df$child_under_6 %>% AMR::freq()%>% as.data.frame()%>% 
+  dplyr::rename("level_two_to_four_count"="count","level_two_to_four_percent"="percent") %>% 
+  select(-cum_count,-cum_percent)
+
+only_level_three_to_four_df <- matched_df_full %>% dplyr::filter(
+  level_of_the_student_2018 == 3 & level_of_the_student_2019 ==4
+)
+level_three_to_four<-only_level_three_to_four_df$child_under_6 %>% AMR::freq()%>% as.data.frame()%>% 
+  dplyr::rename("level_three_to_four_count"="count","level_three_to_four_percent"="percent") %>% 
+  select(-cum_count,-cum_percent)
+
+
+all_df_for_under_6_age <- join_all(list(level_one_to_two,level_one_to_three,level_one_to_four,level_two_to_three,level_two_to_four,
+               level_three_to_four), by='item', type='left') %>% dplyr::rename("under_6" = "item") %>% 
+   select(under_6,ends_with("count"))
+
+
+# number of student by facility -------------------------------------------
+
+student_by_facility_2019 <- match.df_2019_cleaned %>% dplyr::group_by(Facility.ID) %>% dplyr::summarise(
+  number_of_student =n()
+) %>% dplyr::mutate(
+  year = factor(2019)
+)
+
+avr_number_of_student_2019 <- sum(student_by_facility_2019$number_of_student)/nrow(student_by_facility_2019)
+
+student_by_facility_2018 <- match.df_2018_cleaned %>% dplyr::group_by(centerid) %>% dplyr::summarise(
+  number_of_student =n()
+) %>% dplyr::mutate(
+  year = factor(2018)
+)
+
+avr_number_of_student_2018 <- sum(student_by_facility_2018$number_of_student)/nrow(student_by_facility_2018)
+# 
+# student_by_facility_2019$number_of_student %>% hist()
+# student_by_facility_2018$number_of_student %>% hist()
+
+
+
+

@@ -14,47 +14,62 @@ output:
 knitr::opts_chunk$set(echo = FALSE,
                       message=FALSE,
                       warning = FALSE)
-# source("scripts/match_id_name.R")
-library(kableExtra)
-library(ggplot2)
-library(hrbrthemes)
-library(tidyverse)
-library(hrbrthemes)
-library(viridis)
-library(forcats)
-library(plyr) 
-source("scripts/population_data_cleaning.R")
 
-df_2019 <- read.csv("inputs/compiled.list_2019.csv",na.strings = c(""," ","N/A"),stringsAsFactors = F)
-df_2019$Camp <-snakecase::to_snake_case(df_2019$Camp) 
+source("scripts/match_id_name.R")
+write.csv(matched_df_full,"outputs/match_df.csv")
 
 
-df_2019$Camp <- if_else(df_2019$Camp %in% remove_zero,
-                                 str_remove_all(df_2019$Camp, "0"),df_2019$Camp,NULL)
-
-
-dataset_2019_cleaned<- df_2019 %>%  filter(Level.of.the.student !="ECD",!is.na(Level.of.the.student))
 ```
 
 
-## Count
-Number of observations-  **`r nrow(dataset_2019_cleaned)`**<br> 
-Nnmber of camps-  **`r length(dataset_2019_cleaned$Camp %>% unique)`**<br> 
-Number of facilities- **`r length(dataset_2019_cleaned$Facility.ID %>% unique)`**
-  
+## Basic information
+Number of observations in 2019-  **`r nrow(dataset_2019_cleaned)`**<br> 
+Number of observations in 2018-  **`r nrow(dataset_2018_cleaned)`**<br> 
+
+Number of facilities in 2018- **`r length(dataset_2018_cleaned$centerid %>% unique)`**<br> 
+Number of facilities in 2019- **`r length(dataset_2019_cleaned$Facility.ID %>% unique)`**<br> 
+
+Average number of student per facility for 2019 - **`r avr_number_of_student_2019`**<br>
+Average number of student per facility for 2018 - **`r avr_number_of_student_2018`**<br>
+
+Unique Progress IDs in 2019- **`r dataset_2019_cleaned$Student.progress.ID %>% unique() %>% length()`** (`r round(dataset_2019_cleaned$Student.progress.ID %>% unique() %>% length()/dataset_2019_cleaned %>% nrow()*100,2)`%) <br> 
+
+<i>***Data Matched by facility IDs***<br>
+2019s facility IDs matched with 2018 - **`r faicility_id_2019_in_2018_count`** (`r faicility_id_2019_in_2018_percent`) <br> 
+2018s facility IDs matched with 2019 - **`r faicility_id_2018_in_2019_count`** (`r faicility_id_2018_in_2019_percent`) <br> 
+
+<i>**Data Matched by name and facility IDs**</i><br>
+ <u>2019s data matched with 2018 - </u> <br> 
+                 1. Taking only matched facility IDs -**`r data_2019_in_2018_count`** (`r data_2019_in_2018_percent`)<br> 
+                <li>Overall - **`r data_2019_in_2018_count_overall`** (`r data_2019_in_2018_percent_overall`) </li><br> 
+                
+ <u>2018s data matched with 2019 -  </u><br>
+                 1. Taking only matched facility IDs -**`r data_2018_in_2019_count`** (`r data_2018_in_2019_percent`)<br> 
+                <li>Overall - **`r data_2018_in_2019_count_overall`** (`r data_2018_in_2019_percent_overall`)</li><br>
+
+## Student per camp
 ```{r fig.height=50, fig.width=60}
 
-summary_by_camp <- dataset_2019_cleaned$Camp %>% AMR::freq() %>% as.data.frame()
+
+summary_by_camp_2019 <- dataset_2019_cleaned$Camp %>% AMR::freq() %>% as.data.frame() %>% dplyr::mutate(
+  year= 2019
+)
+summary_by_camp_2018 <- dataset_2018_cleaned$Camp %>% AMR::freq() %>% as.data.frame()  %>% dplyr::mutate(
+  year= 2018
+)
+
+summary_by_camp <- bind_rows(summary_by_camp_2019,summary_by_camp_2018)
+summary_by_camp$year <- summary_by_camp$year %>% as.factor()
 
 ggplot(summary_by_camp) +
   geom_bar(aes(x = reorder(item, -count),
                y= count,
-               color = item, 
-               fill = item),
-               position = "identity",
+               color = year, 
+               fill = year),
+               position = "dodge",
                stat = "identity")+
-  geom_text(aes(x=item,y=count,label=count), 
-            position=position_dodge(width=0.5), hjust=-.25,size=18)+
+  # geom_text(aes(x=item,y=count,label=count),
+  #            position = position_dodge(width = .5),size=15)+
   theme(axis.title.x = element_blank(),
         axis.title.y = element_text(size = 50),
         axis.line = element_blank(),
@@ -72,8 +87,8 @@ ggplot(summary_by_camp) +
         #                                   colour = "#c1c1c1"),
         panel.spacing = unit(0,"cm"),
         legend.title=element_blank(),
-        legend.text = element_blank(),
-        legend.position = "none",
+        legend.text = element_text(size=50),
+        legend.position = "top",
         legend.justification = .45,
         legend.key.width =  unit(1,"cm"),
         legend.spacing.x = unit(.5, "cm"),
@@ -83,7 +98,7 @@ ggplot(summary_by_camp) +
         plot.margin = unit(c(.1, .1, 0, 0), "cm"),
         legend.text.align = 0,
         strip.text = element_text(size=50))+
-  scale_y_continuous(labels = scales::percent)+
+     # scale_colour_continuous(values=c("red", "blue"))+
   ylab("Camp") +
   xlab("Count") +
   coord_flip()
@@ -102,11 +117,11 @@ summary_by_camp_with_unhcr_pop <- summary_by_camp %>% left_join(population_2019,
 ggplot(summary_by_camp_with_unhcr_pop) +
   geom_bar(aes(x = reorder(item, -percentage_of_total),
                y= percentage_of_total,
-               color = item, 
-               fill = item),
-               position = "identity",
+               color = year, 
+               fill = year),
+               position = "dodge",
                stat = "identity")+
-  geom_text(aes(x=item,y=percentage_of_total,label=round(percentage_of_total*100,2)), position=position_dodge(width=0.5), hjust=-.25,size=18)+
+  # geom_text(aes(x=item,y=percentage_of_total,label=round(percentage_of_total*100,2)), position=position_dodge(width=0.3), hjust=-.25,size=15)+
   theme(axis.title.x = element_blank(),
         axis.title.y = element_text(size = 50),
         axis.line = element_blank(),
@@ -124,8 +139,8 @@ ggplot(summary_by_camp_with_unhcr_pop) +
         #                                   colour = "#c1c1c1"),
         panel.spacing = unit(0,"cm"),
         legend.title=element_blank(),
-        legend.text = element_blank(),
-        legend.position = "none",
+        legend.text = element_text(size=50),
+        legend.position = "top",
         legend.justification = .45,
         legend.key.width =  unit(1,"cm"),
         legend.spacing.x = unit(.5, "cm"),
@@ -174,7 +189,7 @@ ggplot(dataset_2019_cleaned_for_charts) +
                y= percentage,
                color = Level.of.the.student, 
                fill = Level.of.the.student),
-               position = "identity",
+               position = "dodge",
                stat = "identity")+
   # geom_text(aes(x=Level.of.the.student,y=percentage,label=percentage), position=position_dodge(width=0.9), vjust=-0.25,size=12)+
   theme(axis.title.x = element_blank(),
@@ -225,7 +240,7 @@ ggplot(dataset_2019_cleaned_for_charts_mean) +
                y= mean_value,
                color = Camp, 
                fill = Camp),
-               position = "identity",
+               position = "dodge",
                stat = "identity")+
   geom_text(aes(x=Camp,y=mean_value,label=mean_value), position=position_dodge(width=0.5), hjust=-.25,size=18)+
   theme(axis.title.x = element_blank(),
@@ -262,3 +277,18 @@ ggplot(dataset_2019_cleaned_for_charts_mean) +
 
 ```
 
+
+## Change
+Number of matched data - **`r nrow(matched_df_full)`** 
+```{r}
+
+ total_change %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Total Number of change") %>% kable_styling(position = "center")
+
+
+ percentage_change_by_implementing_partner %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Change by implementing partner") %>% kable_styling(position = "center")
+ 
+ change_between_level %>% kable(longtable = T, booktabs = T, linesep = "",caption= "change analysis by level") %>% kable_styling(position = "center")
+
+ 
+all_df_for_under_6_age %>% kable(longtable = T, booktabs = T, linesep = "",caption= "number of promoted who are under age 6") %>% kable_styling(position = "center")
+```
