@@ -287,8 +287,10 @@ Number of matched data - **`r nrow(matched_df_full)`**
 
  percentage_change_by_implementing_partner %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Change by implementing partner") %>% kable_styling(position = "center")
  
- change_between_level %>% kable(longtable = T, booktabs = T, linesep = "",caption= "change analysis by level") %>% kable_styling(position = "center")
+ change_between_level %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Change analysis by level") %>% kable_styling(position = "center")
+  demotion_level_by_org %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Number of demotions by oranization") %>% kable_styling(position = "center")
 
  
-all_df_for_under_6_age %>% kable(longtable = T, booktabs = T, linesep = "",caption= "number of promoted who are under age 6") %>% kable_styling(position = "center")
+all_df_for_under_6_age %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Number of promoted who are under  6") %>% kable_styling(position = "center")
+under_age_6_promoted %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Number of promoted who are under 6 by organization ") %>% kable_styling(position = "center")
 ```

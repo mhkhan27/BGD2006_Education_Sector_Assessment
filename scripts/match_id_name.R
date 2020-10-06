@@ -328,5 +328,99 @@ avr_number_of_student_2018 <- sum(student_by_facility_2018$number_of_student)/nr
 # student_by_facility_2018$number_of_student %>% hist()
 
 
+# demotion_statistics -----------------------------------------------------
 
+matched_df_full %>% names
 
+only_demotion_df <- matched_df_full %>% dplyr::filter(change_value <0)
+child_age_blew_6_df <- matched_df_full %>% dplyr::filter(child_under_6 == "yes") %>% dplyr::filter(change_value >0)
+
+only_demotion_df %>% nrow()
+demotion_by_organization<- AMR::freq(only_demotion_df$Implementing.partner)
+
+org<- list()
+child_age_below_6 <-list()
+for (i in only_demotion_df$Implementing.partner) {
+  org_specific <- only_demotion_df %>% dplyr::filter(Implementing.partner == i)
+  org_specific_child_under_6_promoted <- child_age_blew_6_df %>% dplyr::filter(Implementing.partner == i)
+  
+  
+  only_level_two_to_one_df <- org_specific %>% dplyr::filter(
+    level_of_the_student_2018 == 2 & level_of_the_student_2019 ==1
+  ) %>% nrow()
+  
+
+  only_level_three_to_one_df <- org_specific %>% dplyr::filter(
+    level_of_the_student_2018 == 3 & level_of_the_student_2019 ==1
+  ) %>% nrow()
+
+  
+  only_level_three_to_two_df <- org_specific %>% dplyr::filter(
+    level_of_the_student_2018 == 3 & level_of_the_student_2019 ==2
+  )%>% nrow()
+
+  
+  only_level_four_to_one_df <- org_specific %>% dplyr::filter(
+    level_of_the_student_2018 == 4 & level_of_the_student_2019 ==1
+  )%>% nrow()
+
+  only_level_four_to_two_df <- org_specific %>% dplyr::filter(
+    level_of_the_student_2018 == 4 & level_of_the_student_2019 ==2
+  )%>% nrow()
+  
+  only_level_four_to_three_df <- org_specific %>% dplyr::filter(
+    level_of_the_student_2018 == 4 & level_of_the_student_2019 ==3
+  )%>% nrow()
+  
+
+  org[[i]] <- data.frame(
+    organization_name= i,
+    level_four_to_three = only_level_four_to_three_df,
+    level_four_to_two =only_level_four_to_two_df,
+    level_four_to_one =only_level_four_to_one_df,
+    level_three_to_two =only_level_three_to_two_df,
+    level_three_to_one =only_level_three_to_one_df,
+    level_two_to_one =only_level_two_to_one_df,
+    total = only_level_four_to_three_df+only_level_four_to_two_df+
+      only_level_four_to_one_df+only_level_three_to_two_df+
+      only_level_three_to_one_df+only_level_two_to_one_df
+  )
+##child_under_6_promoted  
+  level_one_to_two_df_child_under_6_and_promoted <- org_specific_child_under_6_promoted %>% dplyr::filter(
+    level_of_the_student_2018 == 1 & level_of_the_student_2019 ==2
+  )%>% nrow()
+  level_one_to_three_df_child_under_6_and_promoted <- org_specific_child_under_6_promoted %>% dplyr::filter(
+    level_of_the_student_2018 == 1 & level_of_the_student_2019 ==3
+  )%>% nrow()
+  only_level_one_to_four_df_child_under_6_and_promoted <- org_specific_child_under_6_promoted %>% dplyr::filter(
+    level_of_the_student_2018 == 1 & level_of_the_student_2019 ==4
+  )%>% nrow()
+  only_level_two_to_three_df_child_under_6_and_promoted <- org_specific_child_under_6_promoted %>% dplyr::filter(
+    level_of_the_student_2018 == 2 & level_of_the_student_2019 ==3
+  )%>% nrow()
+  only_level_two_to_four_df_child_under_6_and_promoted <- org_specific_child_under_6_promoted %>% dplyr::filter(
+    level_of_the_student_2018 == 2 & level_of_the_student_2019 ==4
+  )%>% nrow()
+  only_level_three_to_four_df_child_under_6_and_promoted <- org_specific_child_under_6_promoted %>% dplyr::filter(
+    level_of_the_student_2018 == 3 & level_of_the_student_2019 ==4
+  )%>% nrow()
+  
+  child_age_below_6[[i]] <- data.frame(
+    organization_name = i,
+    level_one_to_two=level_one_to_two_df_child_under_6_and_promoted,
+    level_one_to_three=level_one_to_three_df_child_under_6_and_promoted,
+    level_one_to_four=only_level_one_to_four_df_child_under_6_and_promoted,
+    level_two_to_three=only_level_two_to_three_df_child_under_6_and_promoted,
+    level_two_to_four=only_level_two_to_four_df_child_under_6_and_promoted,
+    level_three_to_four=only_level_three_to_four_df_child_under_6_and_promoted,
+    total= level_one_to_two_df_child_under_6_and_promoted+level_one_to_three_df_child_under_6_and_promoted
+    +only_level_one_to_four_df_child_under_6_and_promoted+only_level_two_to_three_df_child_under_6_and_promoted+
+      only_level_two_to_four_df_child_under_6_and_promoted+only_level_three_to_four_df_child_under_6_and_promoted
+  )
+  
+}
+
+demotion_level_by_org <- do.call("bind_rows",org)
+under_age_6_promoted <- do.call("bind_rows",child_age_below_6)
+
+# demotion_by_org_by_level <-  demotion_level_by_org %>% left_join(demotion_by_organization,by=c("organization_name"="item"))
