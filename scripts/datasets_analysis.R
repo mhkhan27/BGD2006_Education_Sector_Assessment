@@ -6,9 +6,12 @@ library(stringr)
 library(butteR)
 library(srvyr)
 library(plyr)
+library(openxlsx)
 library(kableExtra)
 library(ggplot2)
 source("scripts/population_data_cleaning.R")
+
+remove_dup_all <- c("yes","no")[1]
 
 # read_csv ----------------------------------------------------------------
 df_2019 <- read.csv("inputs/compiled.list_2019.csv",na.strings = c(""," ","N/A"),stringsAsFactors = F)
@@ -120,12 +123,17 @@ dataset_2018_cleaned$childname <-snakecase::to_snake_case(dataset_2018_cleaned$c
 dataset_2019_cleaned$Name.of.the.student <-snakecase::to_snake_case(dataset_2019_cleaned$Name.of.the.student)
 
 match.df_2018_cleaned <- dataset_2018_cleaned %>% dplyr::mutate(
+  
   student_name_and_facility_id = paste0(childname,"_",centerid),
   level_of_the_student_2018 = aggregated,
   camp_2018 =Camp
-)  %>% dplyr::select(student_name_and_facility_id,level_of_the_student_2018,childage,centerid)  %>% dplyr::distinct()
+)  %>% dplyr::select(centerid,ngoname,childname,childage,level_of_the_student_2018,student_name_and_facility_id)  %>% dplyr::distinct()
+match.df_2018_cleaned<- match.df_2018_cleaned %>% dplyr::mutate(
+  ID_2018= seq.int(nrow(match.df_2018_cleaned)),
+)  %>% dplyr::select(ID_2018,centerid,ngoname,childname,childage,level_of_the_student_2018,student_name_and_facility_id) 
 
 match.df_2019_cleaned <- dataset_2019_cleaned %>% dplyr::mutate(
+  
   student_name_and_facility_id = paste0(Name.of.the.student,"_",Facility.ID),
   level_of_the_student_2019 = if_else(Level.of.the.student == "level1",1,
                                       if_else(Level.of.the.student == "level2",2,
@@ -133,8 +141,26 @@ match.df_2019_cleaned <- dataset_2019_cleaned %>% dplyr::mutate(
                                                       if_else(Level.of.the.student == "level4",4,999999,NULL)))),
   
   camp_2019 =Camp
-) %>% dplyr::select(student_name_and_facility_id,camp_2019,level_of_the_student_2019,Implementing.partner,Facility.ID) %>% dplyr::distinct()
+) %>% dplyr::select(Facility.ID,Implementing.partner,Name.of.the.student,level_of_the_student_2019,
+                    student_name_and_facility_id, camp_2019) %>% dplyr::distinct()
+match.df_2019_cleaned <- match.df_2019_cleaned %>% dplyr::mutate(
+  ID_2019= seq.int(nrow(match.df_2019_cleaned)),
+) %>% dplyr::select(ID_2019,Facility.ID,Implementing.partner,Name.of.the.student,level_of_the_student_2019,
+                    student_name_and_facility_id, camp_2019)
 
+match.df_2019_cleaned %>% nrow()
+match.df_2018_cleaned %>% nrow()
+match.df_2018_cleaned$student_name_and_facility_id %>% unique() %>% length()
+match.df_2019_cleaned$student_name_and_facility_id %>% unique() %>% length()
+
+match.df_2019_cleaned <- match.df_2019_cleaned %>% dplyr::filter(!is.na(match.df_2019_cleaned$Facility.ID))
+match.df_2018_cleaned <- match.df_2018_cleaned %>% dplyr::filter(!is.na(match.df_2018_cleaned$centerid))
+
+if(remove_dup_all== "yes"){
+  # matched_df_full <- matched_df_full %>% dplyr::distinct(student_name_and_facility_id)
+  match.df_2019_cleaned<-  match.df_2019_cleaned[! match.df_2019_cleaned$student_name_and_facility_id %in% unique(match.df_2019_cleaned[duplicated(match.df_2019_cleaned$student_name_and_facility_id), "student_name_and_facility_id"]), ]
+  match.df_2018_cleaned<-  match.df_2018_cleaned[! match.df_2018_cleaned$student_name_and_facility_id %in% unique(match.df_2018_cleaned[duplicated(match.df_2018_cleaned$student_name_and_facility_id), "student_name_and_facility_id"]), ]
+}
 
 match.df_2018_cleaned_unique_center_IDs <- match.df_2018_cleaned %>% dplyr::distinct(centerid)
 match.df_2019_cleaned_unique_center_IDs <- match.df_2019_cleaned %>% dplyr::distinct(Facility.ID)
@@ -165,6 +191,7 @@ match.df_2018_cleaned_overall <- match.df_2018_cleaned %>% dplyr::distinct(stude
 match.df_2019_cleaned_overall <- match.df_2019_cleaned %>% dplyr::distinct(student_name_and_facility_id)
 
 
+
 data_2018_in_2019 <- match.df_2018_cleaned_subset_only_centerID_matching$student_name_and_facility_id %in% match.df_2019_cleaned_subset_only_centerID_matching$student_name_and_facility_id %>% AMR::freq() %>% 
   as.data.frame() %>% dplyr::filter(item == T) %>% select(count,percent)
 data_2018_in_2019_percent <- paste0(round(data_2018_in_2019[,2]*100,2),"%")
@@ -190,6 +217,11 @@ data_2019_in_2018_count_overall <- data_2019_in_2018_overall[,1]
 # match.df_2018_cleaned_subset_only_centerID_matching$student_name_and_facility_id %in% match.df_2019_cleaned_subset_only_centerID_matching$student_name_and_facility_id %>% AMR::freq()
 # match.df_2019_cleaned_subset_only_centerID_matching$student_name_and_facility_id %in% match.df_2018_cleaned_subset_only_centerID_matching$student_name_and_facility_id %>% AMR::freq()
 
+match.df_2019_cleaned %>% nrow()
+match.df_2018_cleaned %>% nrow()
+
+
+
 matched_df_full <- match.df_2019_cleaned %>% dplyr::left_join(match.df_2018_cleaned) %>% dplyr::mutate(
   change_value = level_of_the_student_2019-level_of_the_student_2018,
   change_lable = if_else(change_value >0 ,"increased",
@@ -200,8 +232,22 @@ matched_df_full <- match.df_2019_cleaned %>% dplyr::left_join(match.df_2018_clea
 matched_df_full$childage <- as.numeric(matched_df_full$childage)
 
 matched_df_full <- matched_df_full %>% dplyr::mutate(
-  child_under_6 = if_else(childage <6,"yes","no",NULL)
-) %>% select(-childage)
+  child_under_6 = if_else(childage <6,"yes","no",NULL),
+  child_under_5 = if_else(childage <5,"yes","no",NULL), 
+) #%>% select(-childage)
+
+matched_df_full<- matched_df_full %>% dplyr::select(c("ID_2018","ID_2019", "student_name_and_facility_id", "camp_2019",
+                                                      "level_of_the_student_2018","level_of_the_student_2019", 
+                                                      "Implementing.partner", "Facility.ID",  
+                                                      "childage", "centerid", "change_value", "change_lable",
+                                                      "child_under_5","child_under_6"))
+matched_df_full %>% nrow()
+
+
+list_of_datasets <- list("dataset_2018_cleaned" = match.df_2018_cleaned,
+                         "dataset_2019_cleaned" = match.df_2019_cleaned,
+                         "matched_dataset"=matched_df_full)
+write.xlsx(list_of_datasets, file = paste0("outputs/to share with sector/",str_replace_all(Sys.Date(),"-",""),"_","matched_dataset",".xlsx"))
 
 total_change <- matched_df_full$change_lable %>% AMR::freq()
 
@@ -250,7 +296,7 @@ change_between_level <- mean_working_table %>% left_join(fre_2018,by =c("level_o
   count_2019_level_2 = count*level_of_the_student_2019.level_2,
   count_2019_level_3 = count*level_of_the_student_2019.level_3,
   count_2019_level_4 = count*level_of_the_student_2019.level_4
-) %>% select(-dplyr::starts_with("count"),-dplyr::starts_with("child"))
+) %>% select(-dplyr::starts_with("child"),-dplyr::contains("2019.level_"))
 
 
 # level_one_to_level_two --------------------------------------------------
@@ -262,11 +308,20 @@ only_level_one_to_two_df <- matched_df_full %>% dplyr::filter(
    dplyr::rename("level_one_to_two_count"="count","level_one_to_two_percent"="percent") %>% 
    select(-cum_count,-cum_percent)
 
+ level_one_to_two_under_5 <-only_level_one_to_two_df$child_under_5 %>% AMR::freq() %>% as.data.frame() %>% 
+   dplyr::rename("level_one_to_two_count"="count","level_one_to_two_percent"="percent") %>% 
+   select(-cum_count,-cum_percent)
+ 
+ 
 only_level_one_to_three_df <- matched_df_full %>% dplyr::filter(
   level_of_the_student_2018 == 1 & level_of_the_student_2019 ==3
 )
 
 level_one_to_three<- only_level_one_to_three_df$child_under_6 %>% AMR::freq() %>% as.data.frame()%>% 
+  dplyr::rename("level_one_to_three_count"="count","level_one_to_three_percent"="percent") %>% 
+  select(-cum_count,-cum_percent)
+
+level_one_to_three_under_5<- only_level_one_to_three_df$child_under_5 %>% AMR::freq() %>% as.data.frame()%>% 
   dplyr::rename("level_one_to_three_count"="count","level_one_to_three_percent"="percent") %>% 
   select(-cum_count,-cum_percent)
 
@@ -277,11 +332,18 @@ only_level_one_to_four_df <- matched_df_full %>% dplyr::filter(
 level_one_to_four<-only_level_one_to_four_df$child_under_6 %>% AMR::freq()%>% as.data.frame() %>% 
   dplyr::rename("level_one_to_four_count"="count","level_one_to_four_percent"="percent") %>% 
   select(-cum_count,-cum_percent)
+level_one_to_four_under_5<-only_level_one_to_four_df$child_under_5 %>% AMR::freq()%>% as.data.frame() %>% 
+  dplyr::rename("level_one_to_four_count"="count","level_one_to_four_percent"="percent") %>% 
+  select(-cum_count,-cum_percent)
 
 only_level_two_to_three_df <- matched_df_full %>% dplyr::filter(
   level_of_the_student_2018 == 2 & level_of_the_student_2019 ==3
 )
 level_two_to_three<-only_level_two_to_three_df$child_under_6 %>% AMR::freq()%>% as.data.frame()%>% 
+  dplyr::rename("level_two_to_three_count"="count","level_two_to_three_percent"="percent") %>% 
+  select(-cum_count,-cum_percent)
+
+level_two_to_three_under_5<-only_level_two_to_three_df$child_under_5 %>% AMR::freq()%>% as.data.frame()%>% 
   dplyr::rename("level_two_to_three_count"="count","level_two_to_three_percent"="percent") %>% 
   select(-cum_count,-cum_percent)
 
@@ -293,6 +355,10 @@ level_two_to_four<-only_level_two_to_four_df$child_under_6 %>% AMR::freq()%>% as
   dplyr::rename("level_two_to_four_count"="count","level_two_to_four_percent"="percent") %>% 
   select(-cum_count,-cum_percent)
 
+level_two_to_four_under_5<-only_level_two_to_four_df$child_under_5 %>% AMR::freq()%>% as.data.frame()%>% 
+  dplyr::rename("level_two_to_four_count"="count","level_two_to_four_percent"="percent") %>% 
+  select(-cum_count,-cum_percent)
+
 only_level_three_to_four_df <- matched_df_full %>% dplyr::filter(
   level_of_the_student_2018 == 3 & level_of_the_student_2019 ==4
 )
@@ -300,10 +366,21 @@ level_three_to_four<-only_level_three_to_four_df$child_under_6 %>% AMR::freq()%>
   dplyr::rename("level_three_to_four_count"="count","level_three_to_four_percent"="percent") %>% 
   select(-cum_count,-cum_percent)
 
+level_three_to_four_under_5<-only_level_three_to_four_df$child_under_5 %>% AMR::freq()%>% as.data.frame()%>% 
+  dplyr::rename("level_three_to_four_count"="count","level_three_to_four_percent"="percent") %>% 
+  select(-cum_count,-cum_percent)
+
 
 all_df_for_under_6_age <- join_all(list(level_one_to_two,level_one_to_three,level_one_to_four,level_two_to_three,level_two_to_four,
                level_three_to_four), by='item', type='left') %>% dplyr::rename("under_6" = "item") %>% 
    select(under_6,ends_with("count"))
+
+
+all_df_for_under_5_age <- join_all(list(level_one_to_two_under_5,level_one_to_three_under_5,
+                                        level_one_to_four_under_5,level_two_to_three_under_5,
+                                        level_two_to_four_under_5,
+                                        level_three_to_four_under_5), by='item', type='left') %>% dplyr::rename("under_5" = "item") %>% 
+  select(under_5,ends_with("count"))
 
 
 # number of student by facility -------------------------------------------
@@ -424,3 +501,59 @@ demotion_level_by_org <- do.call("bind_rows",org)
 under_age_6_promoted <- do.call("bind_rows",child_age_below_6)
 
 # demotion_by_org_by_level <-  demotion_level_by_org %>% left_join(demotion_by_organization,by=c("organization_name"="item"))
+
+  
+  child_age_blew_5_df <- matched_df_full %>% dplyr::filter(child_under_5 == "yes") %>% dplyr::filter(change_value >0)
+
+  child_age_below_5 <-list()
+  for (i in only_demotion_df$Implementing.partner) {
+    
+    org_specific_child_under_5_promoted <- child_age_blew_5_df %>% dplyr::filter(Implementing.partner == i)
+    
+    ##child_under_5_promoted  
+    level_one_to_two_df_child_under_5_and_promoted <- org_specific_child_under_5_promoted %>% dplyr::filter(
+      level_of_the_student_2018 == 1 & level_of_the_student_2019 ==2
+    )%>% nrow()
+    level_one_to_three_df_child_under_5_and_promoted <- org_specific_child_under_5_promoted %>% dplyr::filter(
+      level_of_the_student_2018 == 1 & level_of_the_student_2019 ==3
+    )%>% nrow()
+    only_level_one_to_four_df_child_under_5_and_promoted <- org_specific_child_under_5_promoted %>% dplyr::filter(
+      level_of_the_student_2018 == 1 & level_of_the_student_2019 ==4
+    )%>% nrow()
+    only_level_two_to_three_df_child_under_5_and_promoted <- org_specific_child_under_5_promoted %>% dplyr::filter(
+      level_of_the_student_2018 == 2 & level_of_the_student_2019 ==3
+    )%>% nrow()
+    only_level_two_to_four_df_child_under_5_and_promoted <- org_specific_child_under_5_promoted %>% dplyr::filter(
+      level_of_the_student_2018 == 2 & level_of_the_student_2019 ==4
+    )%>% nrow()
+    only_level_three_to_four_df_child_under_5_and_promoted <- org_specific_child_under_5_promoted %>% dplyr::filter(
+      level_of_the_student_2018 == 3 & level_of_the_student_2019 ==4
+    )%>% nrow()
+    
+    child_age_below_5[[i]] <- data.frame(
+      organization_name = i,
+      level_one_to_two=level_one_to_two_df_child_under_5_and_promoted,
+      level_one_to_three=level_one_to_three_df_child_under_5_and_promoted,
+      level_one_to_four=only_level_one_to_four_df_child_under_5_and_promoted,
+      level_two_to_three=only_level_two_to_three_df_child_under_5_and_promoted,
+      level_two_to_four=only_level_two_to_four_df_child_under_5_and_promoted,
+      level_three_to_four=only_level_three_to_four_df_child_under_5_and_promoted,
+      total= level_one_to_two_df_child_under_5_and_promoted+level_one_to_three_df_child_under_5_and_promoted
+      +only_level_one_to_four_df_child_under_5_and_promoted+only_level_two_to_three_df_child_under_5_and_promoted+
+        only_level_two_to_four_df_child_under_5_and_promoted+only_level_three_to_four_df_child_under_5_and_promoted
+    )
+    under_age_5_promoted <- do.call("bind_rows",child_age_below_5)
+  }
+  
+  
+
+# matching_table_by_facility ----------------------------------------------
+library(data.table)
+  mydt <- setDT(matched_df_full)
+
+  frq_tab <- mydt[,.N,by = .(centerid,change_lable)]
+  
+freq_by_centerID<- pivot_wider(frq_tab,names_from = "change_lable",values_from = N)
+write.csv(freq_by_centerID,"outputs/to share with sector/frequency_by_centerID.csv",na="")
+
+  

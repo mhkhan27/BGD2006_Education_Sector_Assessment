@@ -15,24 +15,25 @@ knitr::opts_chunk$set(echo = FALSE,
                       message=FALSE,
                       warning = FALSE)
 
-source("scripts/match_id_name.R")
+source("scripts/datasets_analysis.R")
 write.csv(matched_df_full,"outputs/match_df.csv")
+
 
 
 ```
 
 
 ## Basic information
-Number of observations in 2019-  **`r nrow(dataset_2019_cleaned)`**<br> 
-Number of observations in 2018-  **`r nrow(dataset_2018_cleaned)`**<br> 
+Number of observations in 2019-  **`r nrow(match.df_2019_cleaned)`**<br> 
+Number of observations in 2018-  **`r nrow(match.df_2018_cleaned)`**<br> 
 
-Number of facilities in 2018- **`r length(dataset_2018_cleaned$centerid %>% unique)`**<br> 
-Number of facilities in 2019- **`r length(dataset_2019_cleaned$Facility.ID %>% unique)`**<br> 
+Number of facilities in 2018- **`r length(match.df_2018_cleaned$centerid %>% unique)`**<br> 
+Number of facilities in 2019- **`r length(match.df_2019_cleaned$Facility.ID %>% unique)`**<br> 
 
 Average number of student per facility for 2019 - **`r avr_number_of_student_2019`**<br>
 Average number of student per facility for 2018 - **`r avr_number_of_student_2018`**<br>
 
-Unique Progress IDs in 2019- **`r dataset_2019_cleaned$Student.progress.ID %>% unique() %>% length()`** (`r round(dataset_2019_cleaned$Student.progress.ID %>% unique() %>% length()/dataset_2019_cleaned %>% nrow()*100,2)`%) <br> 
+Unique Progress IDs in 2019- **`r match.df_2019_cleaned$Student.progress.ID %>% unique() %>% length()`** (`r round(match.df_2019_cleaned$Student.progress.ID %>% unique() %>% length()/match.df_2019_cleaned %>% nrow()*100,2)`%) <br> 
 
 <i>***Data Matched by facility IDs***<br>
 2019s facility IDs matched with 2018 - **`r faicility_id_2019_in_2018_count`** (`r faicility_id_2019_in_2018_percent`) <br> 
@@ -293,4 +294,10 @@ Number of matched data - **`r nrow(matched_df_full)`**
  
 all_df_for_under_6_age %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Number of promoted who are under  6") %>% kable_styling(position = "center")
 under_age_6_promoted %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Number of promoted who are under 6 by organization ") %>% kable_styling(position = "center")
+
+all_df_for_under_5_age %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Number of promoted who are under  5") %>% kable_styling(position = "center")
+
+
+under_age_5_promoted %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Number of promoted who are under 5 by organization ") %>% kable_styling(position = "center")
+
 ```
