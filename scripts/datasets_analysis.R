@@ -100,7 +100,7 @@ remove_from_final_dataset <- c("camp_loc",
 
 
 dataset_2018_cleaned <- df_2018 %>%  left_join(name_fix,by =c("camp_name_new"="old_name")) %>% 
-  select(-remove_from_final_dataset) %>% dplyr::filter(fix_name !="need_to_remove") 
+  select(-remove_from_final_dataset) #%>% dplyr::filter(fix_name !="need_to_remove") 
 
 dataset_2018_cleaned$Camp <- dataset_2018_cleaned$fix_name 
 
@@ -108,6 +108,15 @@ dataset_2018_cleaned <- dataset_2018_cleaned %>% select(-c("fix_name","camp_name
 
 dataset_2018_cleaned<- dataset_2018_cleaned %>% dplyr::filter(!is.na(aggregated))
 
+dataset_2018_cleaned<- dataset_2018_cleaned %>% dplyr::filter(ngoname != "CODEC") %>% dplyr::filter(ngoname != "CODEC UNHCR")
+############################# recoding on 2018
+dataset_2018_cleaned <- dataset_2018_cleaned %>% dplyr::mutate(
+  lived_with_parent_2018 = if_else(liv_parent_y == 1,"yes","no",NULL),
+  sex_2018 = if_else(sex == 1,"Male","Female",NULL),
+  std_previous_education_2018 = if_else(prev_edu == 1 ,"yes","no",NULL),
+  edu_lvl_teacher_host_2018 = teacherhost_2,
+  edu_lvl_teacher_mynmr_2018 = teachermyan_2
+  )
 
 # data_cleaning_2019 ------------------------------------------------------
 
@@ -118,6 +127,8 @@ df_2019$Camp <- if_else(df_2019$Camp %in% remove_zero,
 
 dataset_2019_cleaned<- df_2019 %>%  dplyr::filter(Level.of.the.student !="ECD",!is.na(Level.of.the.student))
 
+dataset_2019_cleaned <- dataset_2019_cleaned %>% dplyr::filter(Implementing.partner != "CODEC")
+
 # matching -----------------------------------------------------------------
 dataset_2018_cleaned$childname <-snakecase::to_snake_case(dataset_2018_cleaned$childname)
 dataset_2019_cleaned$Name.of.the.student <-snakecase::to_snake_case(dataset_2019_cleaned$Name.of.the.student)
@@ -127,10 +138,15 @@ match.df_2018_cleaned <- dataset_2018_cleaned %>% dplyr::mutate(
   student_name_and_facility_id = paste0(childname,"_",centerid),
   level_of_the_student_2018 = aggregated,
   camp_2018 =Camp
-)  %>% dplyr::select(centerid,ngoname,childname,childage,level_of_the_student_2018,student_name_and_facility_id)  %>% dplyr::distinct()
+)  %>% dplyr::select(centerid,ngoname,childname,childage,lived_with_parent_2018,
+                     sex_2018,std_previous_education_2018,edu_lvl_teacher_host_2018,
+                     edu_lvl_teacher_mynmr_2018,level_of_the_student_2018,student_name_and_facility_id) %>% dplyr::distinct()
+
 match.df_2018_cleaned<- match.df_2018_cleaned %>% dplyr::mutate(
   ID_2018= seq.int(nrow(match.df_2018_cleaned)),
-)  %>% dplyr::select(ID_2018,centerid,ngoname,childname,childage,level_of_the_student_2018,student_name_and_facility_id) 
+)  %>% dplyr::select(ID_2018,centerid,ngoname,childname,childage,lived_with_parent_2018,
+                     sex_2018,std_previous_education_2018,edu_lvl_teacher_host_2018,
+                     edu_lvl_teacher_mynmr_2018,level_of_the_student_2018,student_name_and_facility_id) 
 
 match.df_2019_cleaned <- dataset_2019_cleaned %>% dplyr::mutate(
   
@@ -142,11 +158,11 @@ match.df_2019_cleaned <- dataset_2019_cleaned %>% dplyr::mutate(
   
   camp_2019 =Camp
 ) %>% dplyr::select(Facility.ID,Implementing.partner,Name.of.the.student,level_of_the_student_2019,
-                    student_name_and_facility_id, camp_2019) %>% dplyr::distinct()
+                    student_name_and_facility_id, camp_2019,Student.progress.ID) %>% dplyr::distinct()
 match.df_2019_cleaned <- match.df_2019_cleaned %>% dplyr::mutate(
   ID_2019= seq.int(nrow(match.df_2019_cleaned)),
 ) %>% dplyr::select(ID_2019,Facility.ID,Implementing.partner,Name.of.the.student,level_of_the_student_2019,
-                    student_name_and_facility_id, camp_2019)
+                    student_name_and_facility_id, camp_2019,Student.progress.ID)
 
 match.df_2019_cleaned %>% nrow()
 match.df_2018_cleaned %>% nrow()
@@ -238,7 +254,10 @@ matched_df_full <- matched_df_full %>% dplyr::mutate(
 
 matched_df_full<- matched_df_full %>% dplyr::select(c("ID_2018","ID_2019", "student_name_and_facility_id", "camp_2019",
                                                       "level_of_the_student_2018","level_of_the_student_2019", 
-                                                      "Implementing.partner", "Facility.ID",  
+                                                      "Implementing.partner", "Facility.ID", 
+                                                      "lived_with_parent_2018","edu_lvl_teacher_host_2018",
+                                                      "sex_2018","std_previous_education_2018",
+                                                      "edu_lvl_teacher_mynmr_2018",
                                                       "childage", "centerid", "change_value", "change_lable",
                                                       "child_under_5","child_under_6"))
 matched_df_full %>% nrow()
@@ -248,7 +267,7 @@ list_of_datasets <- list("dataset_2018_cleaned" = match.df_2018_cleaned,
                          "dataset_2019_cleaned" = match.df_2019_cleaned,
                          "matched_dataset"=matched_df_full)
 write.xlsx(list_of_datasets, file = paste0("outputs/to share with sector/",str_replace_all(Sys.Date(),"-",""),"_","matched_dataset",".xlsx"))
-
+write.csv(matched_df_full,"outputs/cleanded_5w_data/match_df.csv")
 total_change <- matched_df_full$change_lable %>% AMR::freq()
 
 percentage_change_per_camp <- matched_df_full %>% dplyr::group_by(camp_2019) %>% dplyr::summarise(
