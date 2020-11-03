@@ -2,6 +2,11 @@ rm (list=ls())
 
 library(dplyr)
 library(butteR)
+library(data.table)
+library(srvyr)
+library(openxlsx)
+library(stringr)
+
 
 
 # read_data ---------------------------------------------------------------
@@ -54,9 +59,10 @@ data_for_analysis <- cleaned_data_with_full_facility_data %>% dplyr::mutate(
                                            if_else(edu_lvl_teacher_mynmr_2018 %in% 6:10, "secondary",
                                                    if_else(edu_lvl_teacher_mynmr_2018 %in% 11:12, "higher_secondary",
                                                            if_else(edu_lvl_teacher_mynmr_2018 > 12, "tertiary","error",NULL)))))
-) %>% setnames(old = "change_lable",new = "change_edu_level_status") %>% dplyr::select(-edu_lvl_teacher_host_2018,
-                                                                                       -edu_lvl_teacher_mynmr_2018,
-                                                                                       -childage,
+) %>% setnames(old = c("change_lable","std_previous_education_2018")
+,new = c("change_edu_level_status","student_previous_education_2018")) %>% dplyr::select(-ID_2018,
+                                                                                       -ID_2019,
+                                                                                       -centerid,
                                                                                        -level_of_the_student_2018,
                                                                                        -level_of_the_student_2019)
 
@@ -68,7 +74,7 @@ df_svy$variables$child_under_5 <-  forcats::fct_expand(df_svy$variables$child_un
 
 col_to_analyse <- c("edu_level_2018","edu_level_2019","age_group",
                       "lived_with_parent_2018", "teacher_edu_level_host","teacher_edu_level_mymnr",
-                      "sex_2018", "std_previous_education_2018", 
+                      "sex_2018", "student_previous_education_2018", 
                       "change_edu_level_status", "child_under_5", "child_under_6", 
                       "edu_lvl_teacher_host_2018", "edu_lvl_teacher_mynmr_2018", "change_edu_level")
 
@@ -76,13 +82,29 @@ overall_analysis <- mean_prop_working(design = df_svy,list_of_variables =col_to_
 analysis_by_gender <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "sex_2018")
 analysis_by_camp <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "camp_2019" )
 analysis_by_age_grp <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "age_group")
+analysis_by_previous_education <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "student_previous_education_2018")
+analysis_by_host_teacher_edu_level <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "teacher_edu_level_host")
+analysis_by_mynmr_teacher_edu_level <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "teacher_edu_level_mymnr")
+
+
+data_for_analysis <- data_for_analysis %>% dplyr::select(-teacher_edu_level_host,
+                                                         -teacher_edu_level_mymnr,
+                                                         -child_under_5,
+                                                         -change_value,	
+                                                         -change_edu_level_status,
+                                                         -child_under_6,
+                                                         -change_edu_level,
+                                                         	-age_group)
 na_response_rate <- butteR::get_na_response_rates(data_for_analysis)
 
-
-df_write_list <- list("overall_analysis"= overall_analysis,
+df_write_list <- list("cleaned_data" = data_for_analysis,
+                      "overall_analysis"= overall_analysis,
                       "analysis_by_gender"=analysis_by_gender,
                       "analysis_by_camp"=analysis_by_camp,
                       "analysis_by_age_grp"=analysis_by_age_grp,
+                      "analysis_by_previous_education"=analysis_by_previous_education,
+                      "analysis_by_host_teacher_edu_level"=analysis_by_host_teacher_edu_level,
+                      "analysis_by_mynmr_teacher_edu_level"=analysis_by_mynmr_teacher_edu_level,
                       "na_response_rate"=na_response_rate)
 
-write.xlsx(df_write_list, file = paste0("outputs/basic_analysis_5w_data/",str_replace_all(Sys.Date(),"-",""),"_","basic_analysis_5w_data",".xlsx"))
+write.xlsx(df_write_list, file = paste0("outputs/basic_analysis/secondary_data_basic_analysis/",str_replace_all(Sys.Date(),"-",""),"_","basic_analysis_5w_data",".xlsx"))

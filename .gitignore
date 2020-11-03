@@ -7,8 +7,11 @@
 /outputs/*
 /inputs/*
 /GIS/*
+/DAP/*
 /scrap/*
 /other/*
+/summary.html
+/summary_report_CODEC_removes.html
 /scripts/aser_2018_initial_investigation.html
 
 !/outputs/.gitkeep
