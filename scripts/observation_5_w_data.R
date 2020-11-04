@@ -9,7 +9,7 @@ source("scripts/fix_coordinates_function.R")
 
 # read_data ---------------------------------------------------------------
 
-edu_5_w_data <- read.csv("inputs/EduSector_5W_July-2020_V2.csv",skip = 3,na.strings = c(""," ","N/A"),stringsAsFactors = F) 
+edu_5_w_data <- read.csv("inputs/raw_data/secondary_data/5w_data/EduSector_5W_July-2020_V2.csv",skip = 3,na.strings = c(""," ","N/A"),stringsAsFactors = F) 
 camp_boundary <- st_read("D:\\mh1\\REACH\\Common_shape_files/190310_outline_rohingya_refugee_camp_a1/190310_Outline_Rohingya_Refugee_Camp_A1.shp")
 
 

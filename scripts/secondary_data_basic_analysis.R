@@ -14,7 +14,7 @@ library(stringr)
 match_data_raw <- read.csv("outputs/cleanded_5w_data/match_df.csv",na.strings = c(""," ","NA"),stringsAsFactors = F)
 
 cleaned_data <- match_data_raw %>% dplyr::filter(change_value == 0 |change_value ==1) %>% 
-  dplyr::filter(change_value >-1) %>% dplyr::filter(childage > 4) #remove demotion and change more than 1
+  dplyr::filter(change_value >-1) %>% dplyr::filter(childage > 4)  %>% dplyr::filter(childage!=19)#remove demotion and change more than 1
 
 cleaned_data$child_under_5 %>% AMR::freq()
 
@@ -46,9 +46,8 @@ data_for_analysis <- cleaned_data_with_full_facility_data %>% dplyr::mutate(
   change_edu_level = paste0("level_",level_of_the_student_2018,"_to_level_",level_of_the_student_2019),
   edu_level_2018 = paste0("level_",level_of_the_student_2018),
   edu_level_2019 = paste0("level_",level_of_the_student_2019),
-  age_group= if_else(childage %in% 3:5,"3_to_5",
-                     if_else(childage %in% 6:14,"6_to_14",
-                             if_else(childage %in% 15:19,"15_to_19","above_range",NULL))),
+  age_group= if_else(childage %in% 5:9,"5_to_9",
+                     if_else(childage %in% 10:15,"10_to_15","above_range",NULL)),
   teacher_edu_level_host = if_else(edu_lvl_teacher_host_2018 == 0, "no_formal_education",
                                    if_else(edu_lvl_teacher_host_2018 %in% 1:5, "primary",
                                            if_else(edu_lvl_teacher_host_2018 %in% 6:10, "secondary",
@@ -71,8 +70,8 @@ df_svy <- as_survey(data_for_analysis)
 
 df_svy$variables$lived_with_parent_2018 <-  forcats::fct_expand(df_svy$variables$lived_with_parent_2018,c( "yes", "no"))
 df_svy$variables$child_under_5 <-  forcats::fct_expand(df_svy$variables$child_under_5,c( "no", "yes"))
-
-col_to_analyse <- c("edu_level_2018","edu_level_2019","age_group",
+df_svy$variables$child_age <- df_svy$variables$childage %>% as.factor()
+col_to_analyse <- c("edu_level_2018","edu_level_2019","age_group","childage_factor",
                       "lived_with_parent_2018", "teacher_edu_level_host","teacher_edu_level_mymnr",
                       "sex_2018", "student_previous_education_2018", 
                       "change_edu_level_status", "child_under_5", "child_under_6", 
@@ -80,6 +79,7 @@ col_to_analyse <- c("edu_level_2018","edu_level_2019","age_group",
 
 overall_analysis <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse )
 analysis_by_gender <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "sex_2018")
+analysis_by_gender_by_age <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = c("sex_2018","age_group"))
 analysis_by_camp <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "camp_2019" )
 analysis_by_age_grp <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "age_group")
 analysis_by_previous_education <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "student_previous_education_2018")
@@ -100,8 +100,9 @@ na_response_rate <- butteR::get_na_response_rates(data_for_analysis)
 df_write_list <- list("cleaned_data" = data_for_analysis,
                       "overall_analysis"= overall_analysis,
                       "analysis_by_gender"=analysis_by_gender,
-                      "analysis_by_camp"=analysis_by_camp,
+                      "analysis_by_gender_by_age"=analysis_by_gender_by_age,
                       "analysis_by_age_grp"=analysis_by_age_grp,
+                      "analysis_by_camp"=analysis_by_camp,
                       "analysis_by_previous_education"=analysis_by_previous_education,
                       "analysis_by_host_teacher_edu_level"=analysis_by_host_teacher_edu_level,
                       "analysis_by_mynmr_teacher_edu_level"=analysis_by_mynmr_teacher_edu_level,

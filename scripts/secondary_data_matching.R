@@ -1,3 +1,4 @@
+#linked_with_rmd_file. you should run the summary.rmd
 rm(list = ls())
 library(dplyr)
 library(snakecase)
@@ -14,8 +15,8 @@ source("scripts/population_data_cleaning.R")
 remove_dup_all <- c("yes","no")[1]
 
 # read_csv ----------------------------------------------------------------
-df_2019 <- read.csv("inputs/compiled.list_2019.csv",na.strings = c(""," ","N/A"),stringsAsFactors = F)
-df_2018 <-read.csv("inputs/Final dataset-ASER plus 19082019.csv",na.strings = c(""," ","N/A","#NULL!"),
+df_2019 <- read.csv("inputs/raw_data/secondary_data/2019/compiled.list_2019.csv",na.strings = c(""," ","N/A"),stringsAsFactors = F)
+df_2018 <-read.csv("inputs/raw_data/secondary_data/2018/Final dataset-ASER plus 19082019.csv",na.strings = c(""," ","N/A","#NULL!"),
                              stringsAsFactors = F) %>% dplyr::filter(!is.na(address)) %>% dplyr::filter (address!="")
 name_fix <- read.csv("DAP/fix_name.csv",na.strings = c(""," "),stringsAsFactors = F)
 #  data_cleaning_2018 data -----------------------------------------------------------------
