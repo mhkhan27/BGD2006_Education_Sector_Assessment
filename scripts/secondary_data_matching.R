@@ -1,5 +1,7 @@
-#linked_with_rmd_file. you should run the summary.rmd
+#linked_with summary.rmd file.
+
 rm(list = ls())
+
 library(dplyr)
 library(snakecase)
 library(tidyr)
@@ -15,12 +17,18 @@ source("scripts/population_data_cleaning.R")
 remove_dup_all <- c("yes","no")[1]
 
 # read_csv ----------------------------------------------------------------
-df_2019 <- read.csv("inputs/raw_data/secondary_data/2019/compiled.list_2019.csv",na.strings = c(""," ","N/A"),stringsAsFactors = F)
-df_2018 <-read.csv("inputs/raw_data/secondary_data/2018/Final dataset-ASER plus 19082019.csv",na.strings = c(""," ","N/A","#NULL!"),
-                             stringsAsFactors = F) %>% dplyr::filter(!is.na(address)) %>% dplyr::filter (address!="")
+
+df_2019 <- read.csv("inputs/raw_data/secondary_data/2019/compiled.list_2019.csv",
+                    na.strings = c(""," ","N/A"),stringsAsFactors = F) #secondary data set for 2019
+df_2018 <-read.csv("inputs/raw_data/secondary_data/2018/Final dataset-ASER plus 19082019.csv",
+                   na.strings = c(""," ","N/A","#NULL!"),stringsAsFactors = F)# secondary data set for 2018
+#%>%  dplyr::filter(!is.na(address)) %>% dplyr::filter (address!="")#
+
 name_fix <- read.csv("DAP/fix_name.csv",na.strings = c(""," "),stringsAsFactors = F)
+
 #  data_cleaning_2018 data -----------------------------------------------------------------
 
+## camp name cleaning in 2018s data
 df_2018 <- df_2018 %>%
   mutate(camp_loc= snakecase::to_snake_case(address),
          address_raw =address,
@@ -110,6 +118,8 @@ dataset_2018_cleaned <- dataset_2018_cleaned %>% select(-c("fix_name","camp_name
 dataset_2018_cleaned<- dataset_2018_cleaned %>% dplyr::filter(!is.na(aggregated))
 
 dataset_2018_cleaned<- dataset_2018_cleaned %>% dplyr::filter(ngoname != "CODEC") %>% dplyr::filter(ngoname != "CODEC UNHCR")
+
+
 ############################# recoding on 2018
 dataset_2018_cleaned <- dataset_2018_cleaned %>% dplyr::mutate(
   lived_with_parent_2018 = if_else(liv_parent_y == 1,"yes","no",NULL),
@@ -128,9 +138,10 @@ df_2019$Camp <- if_else(df_2019$Camp %in% remove_zero,
 
 dataset_2019_cleaned<- df_2019 %>%  dplyr::filter(Level.of.the.student !="ECD",!is.na(Level.of.the.student))
 
-dataset_2019_cleaned <- dataset_2019_cleaned %>% dplyr::filter(Implementing.partner != "CODEC")
+dataset_2019_cleaned <- dataset_2019_cleaned %>% dplyr::filter(Implementing.partner != "CODEC")#remove CODEC as their data was not collected with same methodology 
 
-# matching -----------------------------------------------------------------
+# data triming for 2018 and 2019 -----------------------------------------------------------------
+
 dataset_2018_cleaned$childname <-snakecase::to_snake_case(dataset_2018_cleaned$childname)
 dataset_2019_cleaned$Name.of.the.student <-snakecase::to_snake_case(dataset_2019_cleaned$Name.of.the.student)
 
@@ -170,14 +181,19 @@ match.df_2018_cleaned %>% nrow()
 match.df_2018_cleaned$student_name_and_facility_id %>% unique() %>% length()
 match.df_2019_cleaned$student_name_and_facility_id %>% unique() %>% length()
 
+######################################################### Cleaned data set for 2018 and 2019 #############################
+
 match.df_2019_cleaned <- match.df_2019_cleaned %>% dplyr::filter(!is.na(match.df_2019_cleaned$Facility.ID))
 match.df_2018_cleaned <- match.df_2018_cleaned %>% dplyr::filter(!is.na(match.df_2018_cleaned$centerid))
 
+
 if(remove_dup_all== "yes"){
-  # matched_df_full <- matched_df_full %>% dplyr::distinct(student_name_and_facility_id)
   match.df_2019_cleaned<-  match.df_2019_cleaned[! match.df_2019_cleaned$student_name_and_facility_id %in% unique(match.df_2019_cleaned[duplicated(match.df_2019_cleaned$student_name_and_facility_id), "student_name_and_facility_id"]), ]
   match.df_2018_cleaned<-  match.df_2018_cleaned[! match.df_2018_cleaned$student_name_and_facility_id %in% unique(match.df_2018_cleaned[duplicated(match.df_2018_cleaned$student_name_and_facility_id), "student_name_and_facility_id"]), ]
 }
+
+
+############################################# Each year summary: For share with sector #####################################
 
 match.df_2018_cleaned_unique_center_IDs <- match.df_2018_cleaned %>% dplyr::distinct(centerid)
 match.df_2019_cleaned_unique_center_IDs <- match.df_2019_cleaned %>% dplyr::distinct(Facility.ID)
@@ -208,7 +224,6 @@ match.df_2018_cleaned_overall <- match.df_2018_cleaned %>% dplyr::distinct(stude
 match.df_2019_cleaned_overall <- match.df_2019_cleaned %>% dplyr::distinct(student_name_and_facility_id)
 
 
-
 data_2018_in_2019 <- match.df_2018_cleaned_subset_only_centerID_matching$student_name_and_facility_id %in% match.df_2019_cleaned_subset_only_centerID_matching$student_name_and_facility_id %>% AMR::freq() %>% 
   as.data.frame() %>% dplyr::filter(item == T) %>% select(count,percent)
 data_2018_in_2019_percent <- paste0(round(data_2018_in_2019[,2]*100,2),"%")
@@ -231,13 +246,7 @@ data_2019_in_2018_percent_overall <- paste0(round(data_2019_in_2018_overall[,2]*
 data_2019_in_2018_count_overall <- data_2019_in_2018_overall[,1]
 
  
-# match.df_2018_cleaned_subset_only_centerID_matching$student_name_and_facility_id %in% match.df_2019_cleaned_subset_only_centerID_matching$student_name_and_facility_id %>% AMR::freq()
-# match.df_2019_cleaned_subset_only_centerID_matching$student_name_and_facility_id %in% match.df_2018_cleaned_subset_only_centerID_matching$student_name_and_facility_id %>% AMR::freq()
-
-match.df_2019_cleaned %>% nrow()
-match.df_2018_cleaned %>% nrow()
-
-
+####################################################### Data Matching ########################################################
 
 matched_df_full <- match.df_2019_cleaned %>% dplyr::left_join(match.df_2018_cleaned) %>% dplyr::mutate(
   change_value = level_of_the_student_2019-level_of_the_student_2018,
@@ -261,14 +270,30 @@ matched_df_full<- matched_df_full %>% dplyr::select(c("ID_2018","ID_2019", "stud
                                                       "edu_lvl_teacher_mynmr_2018",
                                                       "childage", "centerid", "change_value", "change_lable",
                                                       "child_under_5","child_under_6"))
-matched_df_full %>% nrow()
+
+matched_df_full <- matched_df_full %>% dplyr::filter(change_value == 0 |change_value ==1) %>% 
+  dplyr::filter(change_value >-1) %>% dplyr::filter(childage > 4)  %>% dplyr::filter(childage!=19)
 
 
-list_of_datasets <- list("dataset_2018_cleaned" = match.df_2018_cleaned,
-                         "dataset_2019_cleaned" = match.df_2019_cleaned,
-                         "matched_dataset"=matched_df_full)
-write.xlsx(list_of_datasets, file = paste0("outputs/to share with sector/",str_replace_all(Sys.Date(),"-",""),"_","matched_dataset",".xlsx"))
-write.csv(matched_df_full,"outputs/cleanded_5w_data/match_df.csv")
+#################################### write output of matched data ##################################################
+
+
+
+
+
+# list_of_datasets <- list("dataset_2018_cleaned" = match.df_2018_cleaned,
+#                          "dataset_2019_cleaned" = match.df_2019_cleaned,
+#                          "matched_dataset"=matched_df_full)
+#write.xlsx(list_of_datasets, file = paste0("outputs/to share with sector/",str_replace_all(Sys.Date(),"-",""),"_","matched_dataset",".xlsx"))
+write.csv(matched_df_full,"outputs/cleaned_data/secondary_data/matched_data.csv")
+
+
+
+
+
+
+###################################### For summary report: to share with education sector ##############################
+
 total_change <- matched_df_full$change_lable %>% AMR::freq()
 
 percentage_change_per_camp <- matched_df_full %>% dplyr::group_by(camp_2019) %>% dplyr::summarise(
@@ -574,6 +599,6 @@ library(data.table)
   frq_tab <- mydt[,.N,by = .(centerid,change_lable)]
   
 freq_by_centerID<- pivot_wider(frq_tab,names_from = "change_lable",values_from = N)
-write.csv(freq_by_centerID,"outputs/to share with sector/frequency_by_centerID.csv",na="")
+#write.csv(freq_by_centerID,"outputs/to share with sector/frequency_by_centerID.csv",na="")
 
   
