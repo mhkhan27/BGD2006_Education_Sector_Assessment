@@ -62,9 +62,9 @@ cleaned_data <- cleaned_data %>% dplyr::mutate(
 # write cleaned data ------------------------------------------------------
 
 if (write_output == "yes"){
-write.csv(cleaned_data,paste0("outputs/cleaned_data/",population,"/",str_replace_all(Sys.Date(),"-","_"),"_",population,"_cleaned_data.csv"))
+#write.csv(cleaned_data,paste0("outputs/cleaned_data/",population,"/",str_replace_all(Sys.Date(),"-","_"),"_",population,"_cleaned_data.csv"))
 write.csv(cleaned_data,paste0("outputs/cleaned_data/",population,"/",population,"_cleaned_data.csv"))
-write.xlsx(cleaned_data,paste0("outputs/cleaned_data/",population,"/",str_replace_all(Sys.Date(),"-","_"),"_",population,"_cleaned_data.xlsx"))
+#write.xlsx(cleaned_data,paste0("outputs/cleaned_data/",population,"/",str_replace_all(Sys.Date(),"-","_"),"_",population,"_cleaned_data.xlsx"))
 }
 
 # consent_count -------------------------------------------------------------------
