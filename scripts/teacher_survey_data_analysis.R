@@ -177,6 +177,14 @@ teacher_lang_cols <- clean_df_yes_consent %>% dplyr::select(starts_with("teacher
 
 # basic analysis ----------------------------------------------------------
  composite_indicator_df$upazila <- composite_indicator_df$upazila %>% tolower()
+ 
+ multiple_choice_to_interger<- composite_indicator_df %>% dplyr::select(c(starts_with("modality_support_home_based_learning."),
+                                                                          starts_with("access_this_assistance."))) %>% names()
+ 
+ composite_indicator_df$access_this_assistance.all_students %>% class()
+ 
+ composite_indicator_df<- composite_indicator_df %>% dplyr::mutate_at(
+     multiple_choice_to_interger,  as.integer)
 
  dfsvy <- as_survey(composite_indicator_df)
 
