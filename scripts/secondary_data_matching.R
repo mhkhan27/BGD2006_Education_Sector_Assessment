@@ -272,7 +272,7 @@ matched_df_full<- matched_df_full %>% dplyr::select(c("ID_2018","ID_2019", "stud
                                                       "child_under_5","child_under_6"))
 
 matched_df_full <- matched_df_full %>% dplyr::filter(change_value == 0 |change_value ==1) %>% 
-  dplyr::filter(change_value >-1) %>% dplyr::filter(childage > 4)  %>% dplyr::filter(childage!=19)
+  dplyr::filter(change_value >-1) %>% dplyr::filter(!(change_value ==1 & childage %in% 1:4))  %>% dplyr::filter(childage!=19)
 
 
 #################################### write output of matched data ##################################################

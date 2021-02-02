@@ -297,6 +297,6 @@ under_age_6_promoted %>% kable(longtable = T, booktabs = T, linesep = "",caption
 all_df_for_under_5_age %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Number of promoted who are under  5") %>% kable_styling(position = "center")
 
 
-under_age_5_promoted %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Number of promoted who are under 5 by organization ") %>% kable_styling(position = "center")
+# under_age_5_promoted %>% kable(longtable = T, booktabs = T, linesep = "",caption= "Number of promoted who are under 5 by organization ") %>% kable_styling(position = "center")
 
 ```

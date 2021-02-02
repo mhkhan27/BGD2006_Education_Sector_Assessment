@@ -56,7 +56,8 @@ cleaned_data$ki_code <- cleaned_data$ki_code %>% toupper()
 cleaned_data <- cleaned_data %>% dplyr::mutate(
    I.teacher_profile= case_when(startsWith(ki_code,"A")| startsWith(ki_code,"B") ~ "bangla_camp_teacher",
                                      startsWith(ki_code,"C")| startsWith(ki_code,"D") ~ "burmese_teacher",
-                                     startsWith(ki_code,"E")| startsWith(ki_code,"F") ~ "bangla_hc_teacher",
+                                     startsWith(ki_code,"E")| startsWith(ki_code,"F") |
+                                     startsWith(ki_code,"G")| startsWith(ki_code,"H") ~ "bangla_hc_teacher",
                                      T~NA_character_))
 
 # write cleaned data ------------------------------------------------------
@@ -201,7 +202,7 @@ cols_to_analyze <- composite_indicator_df %>% select(c(-ends_with("_other"),
  
 dfsvy$variables$I.SCHOOL.ratio_schools<- forcats::fct_expand(dfsvy$variables$I.SCHOOL.ratio_schools,c( "low","ideal", "high"))
 dfsvy$variables$I.HB_LEARNING.ratio_schools<- forcats::fct_expand(dfsvy$variables$I.HB_LEARNING.ratio_schools,c( "low","ideal", "high"))
-dfsvy$variables$modality_support_home_based_learning.other <- forcats::fct_expand(dfsvy$variables$modality_support_home_based_learning.other,c( "0","1"))
+#dfsvy$variables$modality_support_home_based_learning.other <- forcats::fct_expand(dfsvy$variables$modality_support_home_based_learning.other,c( "0","1"))
 
 overall_analysis <- mean_prop_working(design = dfsvy,list_of_variables = cols_to_analyze)
 
@@ -237,3 +238,38 @@ if (write_output == "yes" ) {
  
  write.xlsx(basic_analysis_write_list, file = paste0("outputs/basic_analysis/teacher_basic_analysis/",str_replace_all(Sys.Date(),"-",""),"_",population,"_","basic_analysis.xlsx"))
 }
+
+
+
+# frequency ---------------------------------------------------------------
+
+overall_freq <- illuminate::survey_frequency_by_questions(composite_indicator_df)
+freq_by_teacher_groups <- illuminate::survey_frequency_by_questions(composite_indicator_df,aggregation_level ="teacher_groups" )
+freq_by_teacher_profile <- illuminate::survey_frequency_by_questions(composite_indicator_df,aggregation_level ="I.teacher_profile")
+freq_by_upazila_t.group <- illuminate::survey_frequency_by_questions(composite_indicator_df,aggregation_level =c("upazila","teacher_groups"))
+freq_by_upazila_t.profile  <- illuminate::survey_frequency_by_questions(composite_indicator_df,aggregation_level =c("upazila","I.teacher_profile"))
+freq_by_T.group_gender <- illuminate::survey_frequency_by_questions(composite_indicator_df,aggregation_level =c("resp_gender","teacher_groups"))
+freq_by_T.profile_gender <- illuminate::survey_frequency_by_questions(composite_indicator_df,aggregation_level =c("resp_gender","I.teacher_profile"))
+
+freq_by_upazila_by_teacher_groups_by_gender <- illuminate::survey_frequency_by_questions(composite_indicator_df,
+                                                                     aggregation_level =  c("upazila","resp_gender","teacher_groups"))
+freq_by_upazila_by_teacher_profile_by_gender <- illuminate::survey_frequency_by_questions(composite_indicator_df,
+                                                                      aggregation_level =  c("upazila","resp_gender","I.teacher_profile"))
+
+if (write_output == "yes" ) {
+   
+  freq_write_list <- list(
+      "overall_freq"= overall_freq,
+      "freq_by_teacher_groups"=freq_by_teacher_groups,
+      "freq_by_teacher_profile"=freq_by_teacher_profile,
+      "freq_by_upazila_t.group"=freq_by_upazila_t.group,
+      "freq_by_upazila_t.profile"=freq_by_upazila_t.profile,
+      "freq_by_T.prfl_gndr"=freq_by_T.profile_gender,
+      "freq_by_T.grp_gndr"=freq_by_T.group_gender,
+      "freq_by_upzla_T.grp_gndr" =freq_by_upazila_by_teacher_groups_by_gender,
+      "freq_by_upzla_T.prfl_gndr"=freq_by_upazila_by_teacher_profile_by_gender)
+   
+   write.xlsx(freq_write_list, file = paste0("outputs/frequecny/teacher/",str_replace_all(Sys.Date(),"-",""),"_",population,"_","freq.xlsx"))
+}
+
+

@@ -11,16 +11,24 @@ library(illuminate)
 #source("scrap/response_frequency.R")
 
 write_output <- c("yes","no")[1]
+
+
+# camp_name ---------------------------------------------------------------
+
+
+camp_info <- read.csv("DAP/camp_info/camp_name.csv") %>% select(Upazila,Camp_Name)
+
 # read_data ---------------------------------------------------------------
 
-match_data_raw <- read.csv("outputs/cleaned_data/secondary_data/matched_data.csv",na.strings = c(""," ","NA"),stringsAsFactors = F)
+cleaned_data <- read.csv("outputs/cleaned_data/secondary_data/matched_data.csv",na.strings = c(""," ","NA"),stringsAsFactors = F)
 
-cleaned_data <- match_data_raw %>% dplyr::filter(change_value == 0 |change_value ==1) %>% 
-  dplyr::filter(change_value >-1) %>% dplyr::filter(childage > 4)  %>% dplyr::filter(childage!=19) # remove demotion and change more than 1
+cleaned_data <- cleaned_data %>% left_join(camp_info,by= c("camp_2019"="Camp_Name"))
 
 cleaned_data$child_under_5 %>% AMR::freq()
 
 cleaned_data %>% names()
+
+cleaned_data <- cleaned_data %>% filter(childage > 4)
 
 # facility analysis -------------------------------------------------------
 
@@ -87,7 +95,7 @@ df_svy$variables$child_age_2018 <- df_svy$variables$childage %>% as.factor()
 col_to_analyse <- c("edu_level_2018","edu_level_2019","age_group","child_age_2018","change_out_of_level_1",
                     "change_out_of_level_2","change_out_of_level_3","change_out_of_level_4",
                       "lived_with_parent_2018", "teacher_edu_level_host","teacher_edu_level_mymnr",
-                      "sex_2018", "student_previous_education_2018", 
+                      "sex_2018", "student_previous_education_2018","Upazila", 
                       "change_edu_level_status", "child_under_5", "child_under_6", 
                        "change_edu_level")
 
@@ -95,6 +103,7 @@ col_to_analyse <- c("edu_level_2018","edu_level_2019","age_group","child_age_201
 
 overall_analysis <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse)
 analysis_by_implementing_partner <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "Implementing.partner" )
+analysis_by_upazila <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "Upazila")
 analysis_by_each_age <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "child_age_2018" )
 analysis_by_gender <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = "sex_2018")
 analysis_by_gender_by_age <- mean_prop_working(design = df_svy,list_of_variables =col_to_analyse,aggregation_level = c("sex_2018","age_group"))
@@ -108,31 +117,58 @@ analysis_by_mynmr_teacher_edu_level <- mean_prop_working(design = df_svy,list_of
 na_response_rate <- butteR::get_na_response_rates(data_for_analysis)
 
 # frequency_by_choices ----------------------------------------------------
-
-# survey_frequency_by_choices_overall <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =  col_to_analyse)
-# survey_frequency_by_choices_by_each_age <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "child_age_2018" )
-# survey_frequency_by_choices_by_implementing_partner <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze = col_to_analyse,aggregation_level = "Implementing.partner")
-# survey_frequency_by_choices_by_gender <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "sex_2018" )
-# survey_frequency_by_choices_by_gender_by_age <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze = col_to_analyse,aggregation_level = c("sex_2018","age_group"))
-# survey_frequency_by_choices_by_camp <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "camp_2019" )
-# survey_frequency_by_choices_by_age_grp <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "age_group" )
-# survey_frequency_by_choices_by_previous_education <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "student_previous_education_2018" )
-# survey_frequency_by_choices_by_host_teacher_edu_level <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "teacher_edu_level_host" )
-# survey_frequency_by_choices_by_mynmr_teacher_edu_level <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "teacher_edu_level_mymnr" )
 # 
+survey_frequency_by_choices_overall <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =  col_to_analyse)
+survey_frequency_by_choices_by_each_age <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "child_age_2018" )
+survey_frequency_by_choices_by_implementing_partner <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze = col_to_analyse,aggregation_level = "Implementing.partner")
+survey_frequency_by_choices_by_gender <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "sex_2018" )
+survey_frequency_by_choices_by_gender_by_age <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze = col_to_analyse,aggregation_level = c("sex_2018","age_group"))
+survey_frequency_by_choices_by_camp <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "camp_2019" )
+survey_frequency_by_choices_by_age_grp <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "age_group" )
+survey_frequency_by_choices_by_previous_education <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "student_previous_education_2018" )
+survey_frequency_by_choices_by_host_teacher_edu_level <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "teacher_edu_level_host" )
+survey_frequency_by_choices_by_mynmr_teacher_edu_level <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "teacher_edu_level_mymnr" )
+survey_frequency_by_choices_by_upazila <- survey_frequency_by_choices(df = data_for_analysis,variables_to_analyze =col_to_analyse,aggregation_level = "Upazila" )
+
 
 # frequency_by_questions --------------------------------------------------
 
-# survey_frequency_by_questions_overall <- survey_frequency_by_questions(df = data_for_analysis)
-# survey_frequency_by_questions_by_each_age <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "child_age_2018" )
-# survey_frequency_by_questions_by_implementing_partner <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "Implementing.partner")
-# survey_frequency_by_questions_by_gender <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "sex_2018" )
-# survey_frequency_by_questions_by_gender_by_age <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = c("sex_2018","age_group"))
-# survey_frequency_by_questions_by_camp <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "camp_2019" )
-# survey_frequency_by_questions_by_age_grp <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "age_group" )
-# survey_frequency_by_questions_by_previous_education <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "student_previous_education_2018" )
-# survey_frequency_by_questions_by_host_teacher_edu_level <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "teacher_edu_level_host" )
-# survey_frequency_by_questions_by_mynmr_teacher_edu_level <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "teacher_edu_level_mymnr" )
+survey_frequency_by_questions_overall <- survey_frequency_by_questions(df = data_for_analysis)
+survey_frequency_by_questions_by_each_age <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "child_age_2018" )
+survey_frequency_by_questions_by_implementing_partner <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "Implementing.partner")
+survey_frequency_by_questions_by_gender <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "sex_2018" )
+survey_frequency_by_questions_by_gender_by_age <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = c("sex_2018","age_group"))
+survey_frequency_by_questions_by_camp <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "camp_2019" )
+survey_frequency_by_questions_by_age_grp <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "age_group" )
+survey_frequency_by_questions_by_previous_education <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "student_previous_education_2018" )
+survey_frequency_by_questions_by_host_teacher_edu_level <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "teacher_edu_level_host" )
+survey_frequency_by_questions_by_mynmr_teacher_edu_level <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "teacher_edu_level_mymnr" )
+
+survey_frequency_by_questions_by_upazila <- survey_frequency_by_questions(df = data_for_analysis,aggregation_level = "Upazila" )
+
+
+
+# aser_data_analysis ------------------------------------------------------
+
+aser_data <- read.csv("inputs/raw_data/secondary_data/2018/Final dataset-ASER plus 19082019.csv",
+                      na.strings = c(""," ","N/A","#NULL!"),stringsAsFactors = F) %>% mutate(
+                        edu_lvl_teacher_host_2018 = teacherhost_2,
+                        edu_lvl_teacher_mynmr_2018 = teachermyan_2
+                      ) %>% mutate(
+                        teacher_edu_level_host = if_else(edu_lvl_teacher_host_2018 == 0, "no_formal_education",
+                                                         if_else(edu_lvl_teacher_host_2018 %in% 1:5, "primary",
+                                                                 if_else(edu_lvl_teacher_host_2018 %in% 6:10, "secondary",
+                                                                         if_else(edu_lvl_teacher_host_2018 %in% 11:12, "higher_secondary",
+                                                                                 if_else(edu_lvl_teacher_host_2018 > 12, "tertiary","error",NULL))))),
+                        teacher_edu_level_mymnr = if_else(edu_lvl_teacher_mynmr_2018 == 0, "no_formal_education",
+                                                          if_else(edu_lvl_teacher_mynmr_2018 %in% 1:5, "primary",
+                                                                  if_else(edu_lvl_teacher_mynmr_2018 %in% 6:10, "secondary",
+                                                                          if_else(edu_lvl_teacher_mynmr_2018 %in% 11:12, "higher_secondary",
+                                                                                  if_else(edu_lvl_teacher_mynmr_2018 > 12, "tertiary","error",NULL)))))
+                      )
+
+host_teacher_edu <-aser_data$teacher_edu_level_host %>% AMR::freq() %>% as.data.frame() %>% rename("host_edu_level"="item")
+mynmr_teacher_edu <-aser_data$teacher_edu_level_mymnr %>% AMR::freq() %>% as.data.frame() %>% rename("mynmr_edu_level"="item")
 
 
 
@@ -148,8 +184,11 @@ data_for_analysis <- data_for_analysis %>% dplyr::select(-teacher_edu_level_host
                                                          	-age_group)
 
 
-df_write_list <- list("cleaned_data" = data_for_analysis,
+df_write_list <- list("ASER_host_teacher_edu" =host_teacher_edu,
+                      "ASER_mynmr_teacher_edu"=mynmr_teacher_edu,
+                      "cleaned_data" = data_for_analysis,
                       "overall_analysis"= overall_analysis,
+                      "analysis_by_upazila"=analysis_by_upazila,
                       "analysis_by_implmntng_prtnr"=analysis_by_implementing_partner,
                       "analysis_by_each_age"=analysis_by_each_age,
                       "analysis_by_gender"=analysis_by_gender,
@@ -163,36 +202,41 @@ df_write_list <- list("cleaned_data" = data_for_analysis,
 
 
 
-# df_write_list_freq_by_choices <- list(
-#   "fre_by_choices_overall" =survey_frequency_by_choices_overall,
-#   "fre_by_choices_by_each_age"=survey_frequency_by_choices_by_each_age,
-#   "fre_by_choices_by_implementing_partner"=survey_frequency_by_choices_by_implementing_partner,
-#   "fre_by_choices_by_gender"=survey_frequency_by_choices_by_gender,
-#   "fre_by_choices_by_gender_by_age"=survey_frequency_by_choices_by_gender_by_age,
-#   "fre_by_choices_by_camp"=survey_frequency_by_choices_by_camp,
-#   "fre_by_choices_by_age_grp"=survey_frequency_by_choices_by_age_grp,
-#   "fre_by_choices_by_previous_education"=survey_frequency_by_choices_by_previous_education,
-#   "fre_by_choices_by_host_teacher_edu_level"=survey_frequency_by_choices_by_host_teacher_edu_level,
-#   "fre_by_choices_by_mynmr_teacher_edu_level"=survey_frequency_by_choices_by_mynmr_teacher_edu_level)
+df_write_list_freq_by_choices <- list(
+  "fre_by_choices_overall" =survey_frequency_by_choices_overall,
+  "fre_by_choices_by_upazila"=survey_frequency_by_choices_by_upazila,
+  "fre_by_choices_by_each_age"=survey_frequency_by_choices_by_each_age,
+  "fre_by_choices_by_implementing_partner"=survey_frequency_by_choices_by_implementing_partner,
+  "fre_by_choices_by_gender"=survey_frequency_by_choices_by_gender,
+  "fre_by_choices_by_gender_by_age"=survey_frequency_by_choices_by_gender_by_age,
+  "fre_by_choices_by_camp"=survey_frequency_by_choices_by_camp,
+  "fre_by_choices_by_age_grp"=survey_frequency_by_choices_by_age_grp,
+  "fre_by_choices_by_previous_education"=survey_frequency_by_choices_by_previous_education,
+  "fre_by_choices_by_host_teacher_edu_level"=survey_frequency_by_choices_by_host_teacher_edu_level,
+  "fre_by_choices_by_mynmr_teacher_edu_level"=survey_frequency_by_choices_by_mynmr_teacher_edu_level)
 
 
 
-# df_write_list_freq_by_questions <- list(
-#   "fre_by_questions_overall" =survey_frequency_by_questions_overall,
-#   "fre_by_questions_by_each_age"=survey_frequency_by_questions_by_each_age,
-#   "fre_by_questions_by_implementing_partner"=survey_frequency_by_questions_by_implementing_partner,
-#   "fre_by_questions_by_gender"=survey_frequency_by_questions_by_gender,
-#   "fre_by_questions_by_gender_by_age"=survey_frequency_by_questions_by_gender_by_age,
-#   "fre_by_questions_by_camp"=survey_frequency_by_questions_by_camp,
-#   "fre_by_questions_by_age_grp"=survey_frequency_by_questions_by_age_grp,
-#   "fre_by_questions_by_previous_education"=survey_frequency_by_questions_by_previous_education,
-#   "fre_by_questions_by_host_teacher_edu_level"=survey_frequency_by_questions_by_host_teacher_edu_level,
-#   "fre_by_questions_by_mynmr_teacher_edu_level"=survey_frequency_by_questions_by_mynmr_teacher_edu_level)
+df_write_list_freq_by_questions <- list(
+  "fre_by_questions_overall" =survey_frequency_by_questions_overall,
+  "fre_by_by_questions_by_upazila"=survey_frequency_by_questions_by_upazila,
+  "fre_by_questions_by_each_age"=survey_frequency_by_questions_by_each_age,
+  "fre_by_questions_by_implementing_partner"=survey_frequency_by_questions_by_implementing_partner,
+  "fre_by_questions_by_gender"=survey_frequency_by_questions_by_gender,
+  "fre_by_questions_by_gender_by_age"=survey_frequency_by_questions_by_gender_by_age,
+  "fre_by_questions_by_camp"=survey_frequency_by_questions_by_camp,
+  "fre_by_questions_by_age_grp"=survey_frequency_by_questions_by_age_grp,
+  "fre_by_questions_by_previous_education"=survey_frequency_by_questions_by_previous_education,
+  "fre_by_questions_by_host_teacher_edu_level"=survey_frequency_by_questions_by_host_teacher_edu_level,
+  "fre_by_questions_by_mynmr_teacher_edu_level"=survey_frequency_by_questions_by_mynmr_teacher_edu_level)
 
 
 write.xlsx(df_write_list, file = paste0("outputs/basic_analysis/secondary_data_basic_analysis/",str_replace_all(Sys.Date(),"-",""),"_","basic_analysis_secondary_data",".xlsx"))
-# write.xlsx(df_write_list_freq_by_choices, file = paste0("outputs/response_rate/secondary_data_basic_analysis/",str_replace_all(Sys.Date(),"-",""),"_","freq_by_choices_5w_data",".xlsx"))
-# write.xlsx(df_write_list_freq_by_questions, file = paste0("outputs/response_rate/secondary_data_basic_analysis/",str_replace_all(Sys.Date(),"-",""),"_","freq_by_questions_5w_data",".xlsx"))
+write.xlsx(df_write_list_freq_by_choices, file = paste0("outputs/response_rate/secondary_data_basic_analysis/",str_replace_all(Sys.Date(),"-",""),"_","freq_by_choices_secondary_data",".xlsx"))
+write.xlsx(df_write_list_freq_by_questions, file = paste0("outputs/response_rate/secondary_data_basic_analysis/",str_replace_all(Sys.Date(),"-",""),"_","freq_by_questions_secondary_data",".xlsx"))
 
 
 }
+
+
+
